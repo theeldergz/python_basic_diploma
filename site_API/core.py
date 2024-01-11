@@ -2,15 +2,17 @@ import pprint
 from database.common.models import db, History
 from typing import Any
 from database.core import crud
-from site_API.core import headers, params, site_api, url
+from site_API.site_schema import headers, params, site_api, url
 
 db_write = crud.create()
 db_read = crud.retrieve()
 
 make_response = site_api.item_by_select_price()
 
+ITEMS_DATA: dict = {}
 
-def get_items_list(min_price: int, max_price: int, page: int) -> dict:
+
+def get_items(min_price: int, max_price: int, page: int) -> dict:
     """
     Функция делает запрос к api на основании указанных цен
     :param min_price: Минимальная цена
@@ -19,10 +21,10 @@ def get_items_list(min_price: int, max_price: int, page: int) -> dict:
     :return: Словарь, ключом которого является цена, а значением список с названием,
              ссылкой на фото, ссылкой на страницу устройства.
     """
-    items_data: dict = {}
     while True:
+
         response = make_response('GET', url, headers=headers, params=params,
-                                 timeout=30, min_price=100, max_price=1500, page=1)
+                                 timeout=30, min_price=min_price, max_price=max_price, page=page)
         pprint.pprint(response, indent=4)
         if response != 500:
             break
@@ -33,12 +35,12 @@ def get_items_list(min_price: int, max_price: int, page: int) -> dict:
         temp_dict = {price: {'price_str': item['prices']['salePrice']['formattedPrice'],
                              'item_name': item['title'],
                              'item_png': item['image']['imgUrl'],
-                             'item_irl': item['link']}}
-        items_data.update(temp_dict)
+                             'item_url': item['link']}}
+        ITEMS_DATA.update(temp_dict)
 
-    pprint.pprint(items_data, indent=4)
+    pprint.pprint(ITEMS_DATA, indent=4)
 
-    return items_data
+    return ITEMS_DATA
 
 
 def sort_by_low(items_data: dict) -> list:
@@ -67,8 +69,8 @@ def sort_by_top(items_data: dict) -> list:
 
 class CreateItemsInterface:
     @staticmethod
-    def get_items_list():
-        return get_items_list
+    def get_items():
+        return get_items
 
     @staticmethod
     def get_keys_by_low():
